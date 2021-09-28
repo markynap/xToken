@@ -143,6 +143,7 @@ contract xToken is IXToken, ReentrancyGuard {
         return _redeemNative(amount);
     }
     
+    /** Swaps xToken For xToken if pairing on PCS exists between them */
     function swapTokenForToken(address tokenToReceive, uint256 amountStartingToken) external nonReentrant returns (bool) {
         return _swapTokenForToken(tokenToReceive, amountStartingToken, msg.sender);
     }
@@ -213,6 +214,7 @@ contract xToken is IXToken, ReentrancyGuard {
         return true;
     }
     
+    /** Swaps xToken For xToken if pairing on PCS exists between them */
     function _swapTokenForToken(address tokenToReceive, uint256 amountStartingToken, address recipient) private returns (bool) {
         // check cases
         require(_balances[msg.sender] >= amountStartingToken && _balances[msg.sender] > 0, 'Insufficient Balance');
