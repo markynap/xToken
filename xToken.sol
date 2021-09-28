@@ -46,6 +46,7 @@ contract xToken is IXToken, ReentrancyGuard {
     uint256 public _transferDenom;
     uint256 public _bridgeFee;
     uint256 public _purchaseFee;
+    uint256 public constant _bridgeFeeDenom = 10**5;
     // balances
     mapping (address => uint256) _balances;
     mapping (address => mapping (address => uint256)) _allowances;
@@ -363,7 +364,7 @@ contract xToken is IXToken, ReentrancyGuard {
     
     /** Updates The Fee Taken When Minting/Burning xTokens */
     function setBridgeFee(uint256 newBridgeFee) external onlyOwner {
-        require(newBridgeFee <= uint256(10**5).div(4), 'Bridge Fee Too High');
+        require(newBridgeFee <= _bridgeFeeDenom.div(4), 'Bridge Fee Too High');
         _bridgeFee = newBridgeFee;
         emit UpdatedBridgeFee(newBridgeFee);
     }
@@ -379,7 +380,7 @@ contract xToken is IXToken, ReentrancyGuard {
 
     /** Caulcates Bridge Fee Applied When Minting / Redeeming xTokens */
     function calculateBridgeFee(uint256 amount) public view returns (uint256) {
-        return amount.mul(_bridgeFee).div(10**5);
+        return amount.mul(_bridgeFee).div(_bridgeFeeDenom);
     }
 
     /** Returns the Native Token This xToken Is Pegged To */
