@@ -218,11 +218,11 @@ contract xToken is IXToken, ReentrancyGuard {
     /** Swaps xToken For xToken if pairing on PCS exists between them */
     function _swapTokenForToken(address tokenToReceive, uint256 amountStartingToken, address recipient) private returns (bool) {
         // check cases
-        require(_balances[msg.sender] >= amountStartingToken && _balances[msg.sender] > 0, 'Insufficient Balance');
+        require(_balances[recipient] >= amountStartingToken && _balances[recipient] > 0, 'Insufficient Balance');
         // if zero use full balance 
-        amountStartingToken = amountStartingToken == 0 ? _balances[msg.sender] : amountStartingToken;
+        amountStartingToken = amountStartingToken == 0 ? _balances[recipient] : amountStartingToken;
         // re-allocate balances before swap initiates
-        _balances[msg.sender] = _balances[msg.sender].sub(amountStartingToken, 'Insufficient Balance Subtraction Overflow');
+        _balances[recipient] = _balances[recipient].sub(amountStartingToken, 'Insufficient Balance Subtraction Overflow');
         _balances[address(this)] = _balances[address(this)].add(amountStartingToken);
         // path from this -> desired token
         address[] memory tokenPath = new address[](2);
