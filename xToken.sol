@@ -143,6 +143,10 @@ contract xToken is IXToken, ReentrancyGuard {
         return _redeemNative(amount);
     }
     
+    function swapTokenForToken(address tokenToReceive, uint256 amountStartingToken) external nonReentrant returns (bool) {
+        return _swapTokenForToken(tokenToReceive, amountStartingToken, msg.sender);
+    }
+    
     
     
     ////////////////////////////////////
@@ -206,6 +210,31 @@ contract xToken is IXToken, ReentrancyGuard {
         // Transfer from seller to address
         emit Transfer(msg.sender, address(this), amount);
         if (taxAmount > 0) emit Transfer(address(this), _feeCollector, taxAmount);
+        return true;
+    }
+    
+    function _swapTokenForToken(address tokenToReceive, uint256 amountStartingToken, address recipient) private returns (bool) {
+        // check cases
+        require(_balances[msg.sender] >= amountStartingToken && _balances[msg.sender] > 0, 'Insufficient Balance');
+        // if zero use full balance 
+        amountStartingToken = amountStartingToken == 0 ? _balances[msg.sender] : amountStartingToken;
+        // re-allocate balances before swap initiates
+        _balances[msg.sender] = _balances[msg.sender].sub(amountStartingToken, 'Insufficient Balance Subtraction Overflow');
+        _balances[address(this)] = _balances[address(this)].add(amountStartingToken);
+        // path from this -> desired token
+        address[] memory tokenPath = new address[](2);
+        tokenPath[0] = address(this);
+        tokenPath[1] = tokenToReceive;
+        // approve router to move tokens
+        approve(address(_router), amountStartingToken);
+        // make the swap
+        try _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            amountStartingToken,
+            0,
+            path,
+            recipient, // give to recipient
+            block.timestamp.add(30)
+        ) {} catch {revert('Error On Token Swap');}
         return true;
     }
     
