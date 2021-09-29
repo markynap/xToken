@@ -351,12 +351,14 @@ contract xToken is IXToken, ReentrancyGuard {
         emit UpdatedTransferDenominator(newDenom);
     }
     
+    /** Updates The Native Purchase Fee */
     function setPurchaseFee(uint256 newPurchaseFee) external onlyOwner {
         require(newPurchaseFee <= 300, 'Fee Too High');
         _purchaseFee = newPurchaseFee;
         emit UpdatedPurchaseFee(newPurchaseFee);
     }
     
+    /** Allows BNB Received To Auto Buy+Bridge Native into xToken */
     function setAllowSelfMinting(bool allow) external onlyOwner {
         _allowSelfMinting = allow;
         emit UpdatedAllowSelfMinting(allow);
