@@ -51,7 +51,7 @@ contract xToken is IXToken, ReentrancyGuard {
     mapping (address => uint256) _balances;
     mapping (address => mapping (address => uint256)) _allowances;
     // blacklist liquidity pools that are not xTokens
-    mapping (address => bool) isLiquidityPool;
+    mapping (address => bool) blacklistedLP;
 
     // Create xToken
     constructor ( address native, string memory tName, string memory tSymbol, uint8 nativeDecimals, address feeCollector, address liquidityProvider
@@ -110,7 +110,7 @@ contract xToken is IXToken, ReentrancyGuard {
         // make standard checks
         require(recipient != address(0), "BEP20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
-        require(!isLiquidityPool[recipient] && !isLiquidityPool[sender], 'Blacklisted Liquidity Pool Detected');
+        require(!blacklistedLP[recipient] && !blacklistedLP[sender], 'Blacklisted Liquidity Pool Detected');
         // subtract from sender
         _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
         // take a tax
@@ -229,7 +229,7 @@ contract xToken is IXToken, ReentrancyGuard {
         tokenPath[0] = address(this);
         tokenPath[1] = tokenToReceive;
         // approve router to move tokens
-        approve(address(_router), amountStartingToken);
+        _allowances[address(this)][address(_router)] = amountStartingToken;
         // make the swap
         try _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountStartingToken,
@@ -315,7 +315,7 @@ contract xToken is IXToken, ReentrancyGuard {
     /** Excludes A Liquidity Pool From Exchanging This xToken */
     function blacklistLiquidityPool(address lpAddress, bool excluded) external onlyOwner {
         require(lpAddress != address(this), 'Cannot Exclude xToken');
-        isLiquidityPool[lpAddress] = excluded;
+        blacklistedLP[lpAddress] = excluded;
         emit BlacklistedLiquidityPool(lpAddress, excluded);
     }
 
@@ -375,7 +375,7 @@ contract xToken is IXToken, ReentrancyGuard {
     
     /** If LP is Blacklisted */
     function isBlacklisted(address liquidityPool) external view returns(bool) {
-        return isLiquidityPool[liquidityPool];
+        return blacklistedLP[liquidityPool];
     }
 
     /** Caulcates Bridge Fee Applied When Minting / Redeeming xTokens */
