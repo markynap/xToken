@@ -234,7 +234,7 @@ contract xToken is IXToken, ReentrancyGuard {
         try _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountStartingToken,
             0,
-            path,
+            tokenPath,
             recipient, // give to recipient
             block.timestamp.add(30)
         ) {} catch {revert('Error On Token Swap');}
