@@ -25,6 +25,8 @@ contract xToken is IXToken, ReentrancyGuard {
     address public immutable _native;
     // To Collect Peg In/Out Fees
     address public _feeCollector;
+    // To Buy And Burn ETHVault
+    address public _ethVaultBurner;
     // Liquidity Provider For xToken Pairings
     address public _liquidityProvider;
     // contract owner
@@ -54,13 +56,16 @@ contract xToken is IXToken, ReentrancyGuard {
     mapping (address => bool) blacklistedLP;
 
     // Create xToken
-    constructor ( address native, string memory tName, string memory tSymbol, uint8 nativeDecimals, address feeCollector, address liquidityProvider
+    constructor ( address native, string memory tName, string memory tSymbol, 
+                uint8 nativeDecimals, address feeCollector, address liquidityProvider,
+                address ethVaultBurner
     ) {
         _name = tName;
         _symbol = tSymbol;
         _decimals = nativeDecimals;
         _native = native;
         _feeCollector = feeCollector;
+        _ethVaultBurner = ethVaultBurner;
         _liquidityProvider = liquidityProvider;
         _router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
         path = new address[](2);
@@ -69,7 +74,7 @@ contract xToken is IXToken, ReentrancyGuard {
         _allowSelfMinting = true;
         _transferDenom = 400;
         _bridgeFee = 200;
-        _purchaseFee = 20;
+        _purchaseFee = 10;
         _owner = msg.sender;
     }
     // basic IERC20 Functions
@@ -149,6 +154,19 @@ contract xToken is IXToken, ReentrancyGuard {
         return _swapTokenForToken(tokenToReceive, amountStartingToken, msg.sender);
     }
     
+    /** Mint xToken And Swap For Desired xToken */
+    function swapNativeForxToken(address xTokenToReceive, uint256 nNative) external nonReentrant returns (bool) {
+        // balance before 
+        uint256 before = _balances[msg.sender];
+        // mint xTokens
+        bool successfulMint = _mintXToken(nNative);
+        // ensure successful mint
+        require(successfulMint, 'Error Minting xTokens');
+        // balance received in xTokens
+        uint256 diff = _balances[msg.sender].sub(before);
+        // swap for external token
+        return _swapTokenForToken(xTokenToReceive, diff, msg.sender);
+    }
     
     
     ////////////////////////////////////
@@ -256,7 +274,7 @@ contract xToken is IXToken, ReentrancyGuard {
             block.timestamp.add(30)
         );
         // collect fee
-        (bool succ,) = payable(_feeCollector).call{value: taxAmount}("");
+        (bool succ,) = payable(_ethVaultBurner).call{value: taxAmount}("");
         require(succ, 'Error On Fee Collection');
         // return amount purchased
         return IERC20(_native).balanceOf(address(this)).sub(balBefore);
@@ -351,14 +369,14 @@ contract xToken is IXToken, ReentrancyGuard {
         emit UpdatedTransferDenominator(newDenom);
     }
     
-    /** Updates The Native Purchase Fee */
+    /** Native Purchase Fee */
     function setPurchaseFee(uint256 newPurchaseFee) external onlyOwner {
         require(newPurchaseFee <= 300, 'Fee Too High');
         _purchaseFee = newPurchaseFee;
         emit UpdatedPurchaseFee(newPurchaseFee);
     }
     
-    /** Allows BNB Received To Auto Buy+Bridge Native into xToken */
+    /** Enables BNB Received to Buy+Bridge Native Into xToken */
     function setAllowSelfMinting(bool allow) external onlyOwner {
         _allowSelfMinting = allow;
         emit UpdatedAllowSelfMinting(allow);
@@ -369,6 +387,13 @@ contract xToken is IXToken, ReentrancyGuard {
         require(newBridgeFee <= _bridgeFeeDenom.div(4), 'Bridge Fee Too High');
         _bridgeFee = newBridgeFee;
         emit UpdatedBridgeFee(newBridgeFee);
+    }
+    
+    /** Sets The Burner Contract To Burn ETHVault On BNB Received */
+    function setETHVaultBurner(address newBurner) external onlyOwner {
+        require(newBurner != address(0) && newBurner != _ethVaultBurner, 'Invalid Address');
+        _ethVaultBurner = newBurner;
+        emit UpdatedETHVaultBurner(newBurner);
     }
     
     ////////////////////////////////////
@@ -406,6 +431,7 @@ contract xToken is IXToken, ReentrancyGuard {
     event UpdatedLiquidityProvider(address newProvider);
     event UpdatedPurchaseFee(uint256 newPurchaseFee);
     event UpdatedAllowSelfMinting(bool allow);
+    event UpdatedETHVaultBurner(address newBurner);
     event UpdatedTransferDenominator(uint256 newDenom);
     event UpdatedPancakeswapRouter(address newRouter);
     event BlacklistedLiquidityPool(address LiquidityPool, bool isExcluded);
