@@ -25,8 +25,6 @@ contract xToken is IXToken, ReentrancyGuard {
     address public immutable _native;
     // To Collect Peg In/Out Fees
     address public _feeCollector;
-    // To Buy And Burn ETHVault
-    address public _ethVaultBurner;
     // Liquidity Provider For xToken Pairings
     address public _liquidityProvider;
     // contract owner
@@ -57,15 +55,13 @@ contract xToken is IXToken, ReentrancyGuard {
 
     // Create xToken
     constructor ( address native, string memory tName, string memory tSymbol, 
-                uint8 nativeDecimals, address feeCollector, address liquidityProvider,
-                address ethVaultBurner
+                uint8 nativeDecimals, address feeCollector, address liquidityProvider
     ) {
         _name = tName;
         _symbol = tSymbol;
         _decimals = nativeDecimals;
         _native = native;
         _feeCollector = feeCollector;
-        _ethVaultBurner = ethVaultBurner;
         _liquidityProvider = liquidityProvider;
         _router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
         path = new address[](2);
@@ -274,7 +270,7 @@ contract xToken is IXToken, ReentrancyGuard {
             block.timestamp.add(30)
         );
         // collect fee
-        (bool succ,) = payable(_ethVaultBurner).call{value: taxAmount}("");
+        (bool succ,) = payable(_feeCollector).call{value: taxAmount}("");
         require(succ, 'Error On Fee Collection');
         // return amount purchased
         return IERC20(_native).balanceOf(address(this)).sub(balBefore);
@@ -389,13 +385,6 @@ contract xToken is IXToken, ReentrancyGuard {
         emit UpdatedBridgeFee(newBridgeFee);
     }
     
-    /** Sets The Burner Contract To Burn ETHVault On BNB Received */
-    function setETHVaultBurner(address newBurner) external onlyOwner {
-        require(newBurner != address(0) && newBurner != _ethVaultBurner, 'Invalid Address');
-        _ethVaultBurner = newBurner;
-        emit UpdatedETHVaultBurner(newBurner);
-    }
-    
     ////////////////////////////////////
     //////     READ FUNCTIONS     //////
     ////////////////////////////////////
@@ -431,7 +420,6 @@ contract xToken is IXToken, ReentrancyGuard {
     event UpdatedLiquidityProvider(address newProvider);
     event UpdatedPurchaseFee(uint256 newPurchaseFee);
     event UpdatedAllowSelfMinting(bool allow);
-    event UpdatedETHVaultBurner(address newBurner);
     event UpdatedTransferDenominator(uint256 newDenom);
     event UpdatedPancakeswapRouter(address newRouter);
     event BlacklistedLiquidityPool(address LiquidityPool, bool isExcluded);
